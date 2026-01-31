@@ -1,20 +1,22 @@
--- [[ COMPOT SCRIPT: ULTIMATE VISUAL UPDATE ]] --
+-- [[ COMPOT SCRIPT: PREMIUM EDITION ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
--- Настройки
+-- Конфигурация
 local Config = {
     Aimbot = true,
     Fov = 150,
     Smooth = 0.08,
-    ESP = true,
+    ESP = false,
     Skeleton = false,
     HUD = true,
-    Speed = 16,
-    MenuVisible = true
+    SpeedEnabled = true,
+    WalkSpeed = 35, -- Стандартная скорость увеличена
+    MenuKey = Enum.KeyCode.P,
+    AimKey = Enum.KeyCode.H
 }
 
 -- === DRAWING API (FOV КРУГ) ===
@@ -24,96 +26,114 @@ FovCircle.Color = Color3.fromRGB(0, 255, 150)
 FovCircle.Filled = false
 FovCircle.Visible = true
 
--- === КРАСИВЫЙ ИНТЕРФЕЙС ===
+-- === СОВРЕМЕННОЕ GUI ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 
--- НОВЫЙ ДИЗАЙН HUD
+-- КРАСИВЫЙ HUD
 local HudFrame = Instance.new("Frame", ScreenGui)
-HudFrame.Size = UDim2.new(0, 220, 0, 75)
+HudFrame.Size = UDim2.new(0, 240, 0, 80)
 HudFrame.Position = UDim2.new(0, 20, 0, 20)
-HudFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+HudFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 HudFrame.BorderSizePixel = 0
-Instance.new("UICorner", HudFrame).CornerRadius = UDim.new(0, 9)
+Instance.new("UICorner", HudFrame).CornerRadius = UDim.new(0, 10)
 
--- Неоновая полоска сверху
-local Accent = Instance.new("Frame", HudFrame)
-Accent.Size = UDim2.new(1, 0, 0, 3)
-Accent.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
-Accent.BorderSizePixel = 0
-Instance.new("UICorner", Accent)
+local HudGradient = Instance.new("UIGradient", HudFrame)
+HudGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 150)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 150, 255))
+}
+
+local HudLine = Instance.new("Frame", HudFrame)
+HudLine.Size = UDim2.new(1, 0, 0, 2)
+HudLine.BackgroundColor3 = Color3.new(1, 1, 1)
+HudLine.BorderSizePixel = 0
+Instance.new("UICorner", HudLine)
 
 local HudTitle = Instance.new("TextLabel", HudFrame)
-HudTitle.Size = UDim2.new(1, 0, 0, 35)
-HudTitle.Position = UDim2.new(0, 0, 0, 5)
-HudTitle.Text = "COMPOT SCRIPT"
-HudTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+HudTitle.Size = UDim2.new(1, 0, 0, 40)
+HudTitle.Text = "COMPOT ELITE"
+HudTitle.TextColor3 = Color3.new(1, 1, 1)
 HudTitle.Font = Enum.Font.GothamBold
-HudTitle.TextSize = 18
+HudTitle.TextSize = 20
 HudTitle.BackgroundTransparency = 1
 
 local StatsLabel = Instance.new("TextLabel", HudFrame)
-StatsLabel.Size = UDim2.new(1, 0, 0, 30)
-StatsLabel.Position = UDim2.new(0, 0, 0, 35)
+StatsLabel.Position = UDim2.new(0, 0, 0.5, 0)
+StatsLabel.Size = UDim2.new(1, 0, 0.4, 0)
 StatsLabel.Text = "FPS: 0 | PING: 0ms"
-StatsLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+StatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 StatsLabel.Font = Enum.Font.Code
 StatsLabel.TextSize = 14
 StatsLabel.BackgroundTransparency = 1
 
--- МЕНЮ НАСТРОЕК
+-- ОСНОВНОЕ МЕНЮ
 local MainMenu = Instance.new("Frame", ScreenGui)
-MainMenu.Size = UDim2.new(0, 260, 0, 350)
-MainMenu.Position = UDim2.new(0.5, -130, 0.5, -175)
-MainMenu.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainMenu.Size = UDim2.new(0, 300, 0, 400)
+MainMenu.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainMenu.BorderSizePixel = 0
-MainMenu.Visible = Config.MenuVisible
+MainMenu.Visible = true
 Instance.new("UICorner", MainMenu)
 
 local MenuStroke = Instance.new("UIStroke", MainMenu)
-MenuStroke.Color = Color3.fromRGB(40, 40, 40)
 MenuStroke.Thickness = 2
+MenuStroke.Color = Color3.fromRGB(40, 40, 40)
 
-local function CreateToggle(name, text, pos, keyhint)
+local MenuTitle = Instance.new("TextLabel", MainMenu)
+MenuTitle.Size = UDim2.new(1, 0, 0, 60)
+MenuTitle.Text = "MAIN SETTINGS"
+MenuTitle.Font = Enum.Font.GothamBold
+MenuTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
+MenuTitle.TextSize = 22
+MenuTitle.BackgroundTransparency = 1
+
+local function CreateButton(name, text, pos, toggleFunc)
     local btn = Instance.new("TextButton", MainMenu)
-    btn.Size = UDim2.new(0, 220, 0, 40)
+    btn.Size = UDim2.new(0, 260, 0, 45)
     btn.Position = UDim2.new(0, 20, 0, pos)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    btn.Text = text .. ": " .. (Config[name] and "ON" or "OFF") .. (keyhint and " ["..keyhint.."]" or "")
-    btn.TextColor3 = Config[name] and Color3.fromRGB(0, 255, 150) or Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
+    btn.TextSize = 15
     Instance.new("UICorner", btn)
-
+    
+    local function Update()
+        btn.Text = text .. ": " .. (Config[name] and "ENABLED" or "DISABLED")
+        btn.TextColor3 = Config[name] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
+    end
+    
     btn.MouseButton1Click:Connect(function()
         Config[name] = not Config[name]
-        btn.Text = text .. ": " .. (Config[name] and "ON" or "OFF") .. (keyhint and " ["..keyhint.."]" or "")
-        btn.TextColor3 = Config[name] and Color3.fromRGB(0, 255, 150) or Color3.new(1,1,1)
+        Update()
+        if toggleFunc then toggleFunc() end
     end)
+    Update()
     return btn
 end
 
-local aimBtn = CreateToggle("Aimbot", "AimBot", 60, "H")
-CreateToggle("ESP", "Box ESP", 110)
-CreateToggle("Skeleton", "Skeleton ESP", 160)
+local aimBtn = CreateButton("Aimbot", "AimBot [H]", 70)
+CreateButton("ESP", "Box ESP", 125)
+CreateButton("SpeedEnabled", "Speed Hack", 180)
 
--- Настройка скорости (Кнопка-слайдер)
-local SpeedBtn = Instance.new("TextButton", MainMenu)
-SpeedBtn.Size = UDim2.new(0, 220, 0, 40)
-SpeedBtn.Position = UDim2.new(0, 20, 0, 210)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-SpeedBtn.Text = "WalkSpeed: " .. Config.Speed
-SpeedBtn.TextColor3 = Color3.fromRGB(0, 180, 255)
-SpeedBtn.Font = Enum.Font.GothamMedium
-SpeedBtn.TextSize = 14
-Instance.new("UICorner", SpeedBtn)
+-- Слайдер скорости (Кнопка + и -)
+local SpeedDisplay = Instance.new("TextLabel", MainMenu)
+SpeedDisplay.Size = UDim2.new(0, 260, 0, 40)
+SpeedDisplay.Position = UDim2.new(0, 20, 0, 235)
+SpeedDisplay.Text = "WalkSpeed: " .. Config.WalkSpeed
+SpeedDisplay.TextColor3 = Color3.new(1,1,1)
+SpeedDisplay.BackgroundTransparency = 1
+SpeedDisplay.Font = Enum.Font.Gotham
 
-SpeedBtn.MouseButton1Click:Connect(function()
-    if Config.Speed < 100 then
-        Config.Speed = Config.Speed + 10
-    else
-        Config.Speed = 16
-    end
-    SpeedBtn.Text = "WalkSpeed: " .. Config.Speed
+local AddSpeed = Instance.new("TextButton", MainMenu)
+AddSpeed.Size = UDim2.new(0, 125, 0, 35)
+AddSpeed.Position = UDim2.new(0, 20, 0, 275)
+AddSpeed.Text = "+ Speed"
+AddSpeed.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+AddSpeed.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", AddSpeed)
+
+AddSpeed.MouseButton1Click:Connect(function()
+    Config.WalkSpeed = math.min(Config.WalkSpeed + 10, 200)
+    SpeedDisplay.Text = "WalkSpeed: " .. Config.WalkSpeed
 end)
 
 -- === ЛОГИКА ===
@@ -137,15 +157,16 @@ end
 
 RunService.RenderStepped:Connect(function()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    
     FovCircle.Position = center
     FovCircle.Radius = Config.Fov
     FovCircle.Visible = Config.Aimbot
     
+    -- Статистика
     local fps = math.floor(1/task.wait())
     local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
     StatsLabel.Text = string.format("FPS: %d | PING: %dms", fps, ping)
     
+    -- Аим
     if Config.Aimbot then
         local t = GetClosest()
         if t and mousemoverel then
@@ -153,23 +174,22 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    if LP.Character and LP.Character:FindFirstChild("Humanoid") then
-        LP.Character.Humanoid.WalkSpeed = Config.Speed
+    -- ПРИНУДИТЕЛЬНЫЕ СПИДЫ (FIX)
+    if Config.SpeedEnabled and LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid.WalkSpeed = Config.WalkSpeed
+    elseif LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid.WalkSpeed = 16
     end
 end)
 
--- === ОБРАБОТКА БИНДОВ ===
+-- Бинды
 UserInputService.InputBegan:Connect(function(input, proc)
     if proc then return end
-    
-    if input.KeyCode == Enum.KeyCode.P then
-        Config.MenuVisible = not Config.MenuVisible
-        MainMenu.Visible = Config.MenuVisible
-    end
-    
-    if input.KeyCode == Enum.KeyCode.H then
+    if input.KeyCode == Config.MenuKey then
+        MainMenu.Visible = not MainMenu.Visible
+    elseif input.KeyCode == Config.AimKey then
         Config.Aimbot = not Config.Aimbot
-        aimBtn.Text = "AimBot: " .. (Config.Aimbot and "ON [H]" or "OFF [H]")
-        aimBtn.TextColor3 = Config.Aimbot and Color3.fromRGB(0, 255, 150) or Color3.new(1,1,1)
+        aimBtn.Text = "AimBot [H]: " .. (Config.Aimbot and "ENABLED" or "DISABLED")
+        aimBtn.TextColor3 = Config.Aimbot and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
     end
 end)
