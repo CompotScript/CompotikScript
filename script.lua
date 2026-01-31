@@ -1,175 +1,164 @@
--- [[ COMPOT ELITE: CS-STYLE EDITION ]] --
+-- [[ COMPOT ELITE: PRO VERSION ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
--- Конфигурация
 local Config = {
-    Aimbot = true,
-    Fov = 150,
-    Smooth = 0.08,
-    ESP = true,
-    SpeedEnabled = true,
-    WalkSpeed = 35,
-    MenuKey = Enum.KeyCode.P,
-    AimKey = Enum.KeyCode.H,
-    Visible = true
+    Aimbot = true, Fov = 150, Smooth = 0.08,
+    ESP = true, Skeleton = true, Names = true, Weapons = true,
+    SpeedEnabled = true, WalkSpeed = 35,
+    MenuKey = Enum.KeyCode.P, AimKey = Enum.KeyCode.H, Visible = true
 }
 
--- === DRAWING API (FOV И ESP) ===
+-- === DRAWING API TOOLS ===
 local FovCircle = Drawing.new("Circle")
 FovCircle.Thickness = 1
 FovCircle.Color = Color3.fromRGB(0, 255, 150)
 FovCircle.Visible = true
 
-local Boxes = {}
+local ESP_Data = {}
 
-local function CreateESP(player)
-    local box = Drawing.new("Square")
-    box.Thickness = 1
-    box.Filled = false
-    box.Color = Color3.fromRGB(255, 255, 255)
-    box.Visible = false
-    Boxes[player] = box
+local function CreateESP(p)
+    local data = {
+        Box = Drawing.new("Square"),
+        Name = Drawing.new("Text"),
+        Weapon = Drawing.new("Text"),
+        Bones = {}
+    }
+    data.Box.Thickness = 1
+    data.Box.Color = Color3.new(1,1,1)
+    data.Name.Size = 14
+    data.Name.Center = true
+    data.Name.Outline = true
+    data.Name.Color = Color3.new(1,1,1)
+    data.Weapon.Size = 13
+    data.Weapon.Center = true
+    data.Weapon.Outline = true
+    data.Weapon.Color = Color3.fromRGB(0, 255, 150)
+    
+    local connections = {
+        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"},
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"},
+        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}
+    }
+    for i=1, #connections do
+        local l = Drawing.new("Line")
+        l.Thickness = 1
+        l.Color = Color3.new(1,1,1)
+        table.insert(data.Bones, {l, connections[i]})
+    end
+    ESP_Data[p] = data
 end
 
-for _, p in pairs(Players:GetPlayers()) do
-    if p ~= LP then CreateESP(p) end
-end
-Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
+for _, p in pairs(Players:GetPlayers()) do if p ~= LP then CreateESP(p) end end
+Players.PlayerAdded:Connect(CreateESP)
 Players.PlayerRemoving:Connect(function(p)
-    if Boxes[p] then Boxes[p]:Remove() Boxes[p] = nil end
+    if ESP_Data[p] then
+        ESP_Data[p].Box:Remove()
+        ESP_Data[p].Name:Remove()
+        ESP_Data[p].Weapon:Remove()
+        for _, b in pairs(ESP_Data[p].Bones) do b[1]:Remove() end
+        ESP_Data[p] = nil
+    end
 end)
 
--- === PREMIUM CS GUI ===
+-- === CS GUI ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-
--- HUD (Сверху слева)
-local HUD = Instance.new("Frame", ScreenGui)
-HUD.Size = UDim2.new(0, 200, 0, 50)
-HUD.Position = UDim2.new(0, 15, 0, 15)
-HUD.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-HUD.BorderSizePixel = 0
-Instance.new("UICorner", HUD)
-Instance.new("UIStroke", HUD).Color = Color3.fromRGB(0, 255, 150)
-
-local HudInfo = Instance.new("TextLabel", HUD)
-HudInfo.Size = UDim2.new(1, 0, 1, 0)
-HudInfo.BackgroundTransparency = 1
-HudInfo.Font = Enum.Font.Code
-HudInfo.TextSize = 14
-HudInfo.TextColor3 = Color3.new(1, 1, 1)
-HudInfo.Text = "COMPOT.ELITE | FPS: 0\nPING: 0ms"
-
--- ГЛАВНОЕ МЕНЮ
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 450, 0, 320)
-Main.Position = UDim2.new(0.5, -225, 0.5, -160)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Main.BorderSizePixel = 0
+Main.Size = UDim2.new(0, 500, 0, 380)
+Main.Position = UDim2.new(0.5, -250, 0.5, -190)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Visible = Config.Visible
 Instance.new("UICorner", Main)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 150)
 
-local SideBar = Instance.new("Frame", Main)
-SideBar.Size = UDim2.new(0, 120, 1, 0)
-SideBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-SideBar.BorderSizePixel = 0
-Instance.new("UICorner", SideBar)
-
-local Title = Instance.new("TextLabel", SideBar)
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.Text = "COMPOT"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = Color3.fromRGB(0, 255, 150)
-Title.BackgroundTransparency = 1
-
--- Контейнер для кнопок функций
-local Container = Instance.new("Frame", Main)
-Container.Position = UDim2.new(0, 130, 0, 10)
-Container.Size = UDim2.new(1, -140, 1, -20)
+local Container = Instance.new("ScrollingFrame", Main)
+Container.Position = UDim2.new(0, 10, 0, 10)
+Container.Size = UDim2.new(1, -20, 1, -20)
 Container.BackgroundTransparency = 1
+Container.CanvasSize = UDim2.new(0,0,1.5,0)
+Container.ScrollBarThickness = 2
 
-local function CreateToggle(name, text, pos)
+local function AddToggle(text, cfg_key)
     local btn = Instance.new("TextButton", Container)
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.Position = UDim2.new(0, 0, 0, pos)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.Size = UDim2.new(0, 220, 0, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Text = text
     Instance.new("UICorner", btn)
-    
-    local function Update()
-        btn.Text = text .. ": " .. (Config[name] and "ON" or "OFF")
-        btn.TextColor3 = Config[name] and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
-    end
-    btn.MouseButton1Click:Connect(function() Config[name] = not Config[name] Update() end)
-    Update()
-    return btn
-end
-
-local aimBtn = CreateToggle("Aimbot", "AimBot [H]", 0)
-CreateToggle("ESP", "Player ESP", 45)
-CreateToggle("SpeedEnabled", "Enable Speed", 90)
-
--- Управление скоростью
-local SpeedControl = Instance.new("Frame", Container)
-SpeedControl.Position = UDim2.new(0, 0, 0, 140)
-SpeedControl.Size = UDim2.new(1, 0, 0, 80)
-SpeedControl.BackgroundTransparency = 1
-
-local SLabel = Instance.new("TextLabel", SpeedControl)
-SLabel.Size = UDim2.new(1, 0, 0, 30)
-SLabel.Text = "Movement Speed: 35"
-SLabel.TextColor3 = Color3.new(1,1,1)
-SLabel.Font = Enum.Font.Gotham
-SLabel.BackgroundTransparency = 1
-
-local function SBtn(text, x, change)
-    local b = Instance.new("TextButton", SpeedControl)
-    b.Size = UDim2.new(0.45, 0, 0, 35)
-    b.Position = UDim2.new(x, 0, 0, 40)
-    b.Text = text
-    b.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        Config.WalkSpeed = math.clamp(Config.WalkSpeed + change, 16, 250)
-        SLabel.Text = "Movement Speed: " .. Config.WalkSpeed
+    btn.MouseButton1Click:Connect(function()
+        Config[cfg_key] = not Config[cfg_key]
+        btn.BackgroundColor3 = Config[cfg_key] and Color3.fromRGB(0, 100, 50) or Color3.fromRGB(25, 25, 25)
     end)
+    Instance.new("UIListLayout", Container).Padding = UDim.new(0,5)
 end
 
-SBtn("-", 0, -10)
-SBtn("+", 0.55, 10)
+AddToggle("Enable Aimbot [H]", "Aimbot")
+AddToggle("Show Box ESP", "ESP")
+AddToggle("Show Skeleton", "Skeleton")
+AddToggle("Show Names", "Names")
+AddToggle("Show Weapons", "Weapons")
 
--- === ЛОГИКА ===
+-- === LOGIC ===
 RunService.RenderStepped:Connect(function()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     FovCircle.Position = center
     FovCircle.Radius = Config.Fov
     FovCircle.Visible = Config.Aimbot
-    
-    HudInfo.Text = string.format("COMPOT.ELITE | FPS: %d\nPING: %dms", math.floor(1/task.wait()), math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()))
-    
-    -- ESP Logic
-    for player, box in pairs(Boxes) do
-        if Config.ESP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local root = player.Character.HumanoidRootPart
-            local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-            if onScreen then
-                local top = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, 3, 0))
-                local bottom = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+
+    for p, v in pairs(ESP_Data) do
+        local char = p.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char.Humanoid.Health > 0 then
+            local hrp = char.HumanoidRootPart
+            local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
+            
+            if vis and Config.ESP then
+                local top = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3.5, 0))
+                local bottom = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3.5, 0))
                 local h = math.abs(top.Y - bottom.Y)
-                box.Size = Vector2.new(h * 0.6, h)
-                box.Position = Vector2.new(pos.X - box.Size.X/2, pos.Y - box.Size.Y/2)
-                box.Visible = true
-            else box.Visible = false end
-        else box.Visible = false end
+                local w = h * 0.6
+                
+                v.Box.Size = Vector2.new(w, h)
+                v.Box.Position = Vector2.new(pos.X - w/2, pos.Y - h/2)
+                v.Box.Visible = true
+                
+                v.Name.Text = p.Name
+                v.Name.Position = Vector2.new(pos.X, pos.Y - h/2 - 15)
+                v.Name.Visible = Config.Names
+                
+                local tool = char:FindFirstChildOfClass("Tool")
+                v.Weapon.Text = tool and tool.Name or "Hands"
+                v.Weapon.Position = Vector2.new(pos.X, pos.Y + h/2 + 5)
+                v.Weapon.Visible = Config.Weapons
+                
+                if Config.Skeleton then
+                    for _, bone in pairs(v.Bones) do
+                        local b1 = char:FindFirstChild(bone[2][1])
+                        local b2 = char:FindFirstChild(bone[2][2])
+                        if b1 and b2 then
+                            local p1 = Camera:WorldToViewportPoint(b1.Position)
+                            local p2 = Camera:WorldToViewportPoint(b2.Position)
+                            bone[1].From = Vector2.new(p1.X, p1.Y)
+                            bone[1].To = Vector2.new(p2.X, p2.Y)
+                            bone[1].Visible = true
+                        else bone[1].Visible = false end
+                    end
+                else for _, b in pairs(v.Bones) do b[1].Visible = false end end
+            else
+                v.Box.Visible = false v.Name.Visible = false v.Weapon.Visible = false
+                for _, b in pairs(v.Bones) do b[1].Visible = false end
+            end
+        else
+            v.Box.Visible = false v.Name.Visible = false v.Weapon.Visible = false
+            for _, b in pairs(v.Bones) do b[1].Visible = false end
+        end
     end
 
-    -- Aim Logic
     if Config.Aimbot then
         local target, minMag = nil, Config.Fov
         for _, p in pairs(Players:GetPlayers()) do
@@ -183,8 +172,6 @@ RunService.RenderStepped:Connect(function()
         end
         if target then mousemoverel((target.X - center.X) * Config.Smooth, (target.Y - center.Y) * Config.Smooth) end
     end
-    
-    -- Speed Logic
     if Config.SpeedEnabled and LP.Character and LP.Character:FindFirstChild("Humanoid") then
         LP.Character.Humanoid.WalkSpeed = Config.WalkSpeed
     end
@@ -192,12 +179,6 @@ end)
 
 UserInputService.InputBegan:Connect(function(i, p)
     if p then return end
-    if i.KeyCode == Config.MenuKey then 
-        Config.Visible = not Config.Visible
-        Main.Visible = Config.Visible
-    elseif i.KeyCode == Config.AimKey then 
-        Config.Aimbot = not Config.Aimbot 
-        aimBtn.Text = "AimBot [H]: " .. (Config.Aimbot and "ON" or "OFF")
-        aimBtn.TextColor3 = Config.Aimbot and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
-    end
+    if i.KeyCode == Config.MenuKey then Config.Visible = not Config.Visible Main.Visible = Config.Visible
+    elseif i.KeyCode == Config.AimKey then Config.Aimbot = not Config.Aimbot end
 end)
