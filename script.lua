@@ -1,74 +1,73 @@
--- [[ COMPOT SCRIPT: DM ARENA OPTIMIZED ]] --
+-- [[ COMPOT SCRIPT FINAL REMAKE ]] --
 
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
-local Window = Library:CreateWindow({ Title = 'CompotScript | DM Arena', Center = true, AutoShow = true })
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
-local Settings = {
-    AimBot = false,
+-- Настройки (можно менять тут)
+local Config = {
+    Enabled = true,
     Fov = 150,
-    Smoothness = 0.2, -- Чем ниже, тем жестче липнет
-    ShowFov = true
+    Smoothness = 0.15, -- Чем меньше, тем быстрее доводка
+    MenuKey = Enum.KeyCode.P,
+    Visible = true
 }
 
--- === КРАСИВЫЙ HUD (КАК НА СКРИНЕ) ===
+-- === СОЗДАНИЕ HUD (Сверху слева) ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 160, 0, 50)
-MainFrame.Position = UDim2.new(0, 10, 0, 45) -- Сдвинул чуть ниже иконок Roblox
-MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-MainFrame.BackgroundTransparency = 0.3
+local HudFrame = Instance.new("Frame", ScreenGui)
+HudFrame.Size = UDim2.new(0, 180, 0, 60)
+HudFrame.Position = UDim2.new(0, 20, 0, 20)
+HudFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+HudFrame.BorderSizePixel = 2
 
-local Stroke = Instance.new("UIStroke", MainFrame)
-Stroke.Color = Color3.fromRGB(255, 255, 255)
-Stroke.Thickness = 2
+local HudStroke = Instance.new("UIStroke", HudFrame)
+HudStroke.Color = Color3.fromRGB(255, 255, 255)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0.5, 0)
+local Title = Instance.new("TextLabel", HudFrame)
+Title.Size = UDim2.new(1, 0, 0, 30)
 Title.Text = "COMPOT SCRIPT"
-Title.Font = Enum.Font.GothamBold
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
 Title.BackgroundTransparency = 1
 
-local Stats = Instance.new("TextLabel", MainFrame)
-Stats.Position = UDim2.new(0, 0, 0.5, 0)
-Stats.Size = UDim2.new(1, 0, 0.5, 0)
-Stats.Text = "FPS: 0 | PING: 0ms"
-Stats.Font = Enum.Font.Code
-Stats.TextColor3 = Color3.fromRGB(180, 180, 180)
-Stats.TextSize = 12
-Stats.BackgroundTransparency = 1
+local StatsLabel = Instance.new("TextLabel", HudFrame)
+StatsLabel.Position = UDim2.new(0, 0, 0, 30)
+StatsLabel.Size = UDim2.new(1, 0, 0, 25)
+StatsLabel.Text = "FPS: ... | PING: ..."
+StatsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatsLabel.Font = Enum.Font.Code
+StatsLabel.TextSize = 13
+StatsLabel.BackgroundTransparency = 1
 
-task.spawn(function()
-    while task.wait(0.5) do
-        local fps = math.floor(1/task.wait())
-        local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-        Stats.Text = string.format("FPS: %d | PING: %dms", fps, ping)
-    end
-end)
-
--- === ЛОГИКА AIM И FOV ===
+-- === FOV КРУГ (Drawing API) ===
 local FovCircle = Drawing.new("Circle")
 FovCircle.Thickness = 1
 FovCircle.Color = Color3.fromRGB(255, 255, 255)
+FovCircle.Visible = true
 FovCircle.Filled = false
 
-local function GetClosestToCenter()
+-- === ФУНКЦИЯ ПОИСКА ЦЕЛИ (В ПУЗО) ===
+local function GetClosestTarget()
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local target = nil
-    local dist = Settings.Fov
-    local center = Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+    local maxDist = Config.Fov
 
-    for _, p in pairs(game.Players:GetPlayers()) do
-        if p ~= game.Players.LocalPlayer and p.Character then
-            -- Целимся в Пузо (HumanoidRootPart или UpperTorso)
-            local part = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("HumanoidRootPart")
-            if part then
-                local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local root = player.Character:FindFirstChild("HumanoidRootPart") -- Центр тела (пузо)
+            local hum = player.Character:FindFirstChild("Humanoid")
+
+            if root and hum and hum.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
                 if onScreen then
-                    local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                    if mag < dist then
-                        target = part
-                        dist = mag
+                    local mag = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+                    if mag < maxDist then
+                        target = screenPos
+                        maxDist = mag
                     end
                 end
             end
@@ -77,42 +76,42 @@ local function GetClosestToCenter()
     return target
 end
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    local center = Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+-- === ОСНОВНОЙ ЦИКЛ ===
+RunService.RenderStepped:Connect(function()
+    -- Центр экрана
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     
-    FovCircle.Visible = Settings.ShowFov
-    FovCircle.Radius = Settings.Fov
+    -- Обновление круга
     FovCircle.Position = center
+    FovCircle.Radius = Config.Fov
+    FovCircle.Visible = Config.Enabled
+    
+    -- Обновление HUD
+    local fps = math.floor(1/task.wait())
+    local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+    StatsLabel.Text = string.format("FPS: %d | Ping: %dms", fps, ping)
 
-    if Settings.AimBot then
-        local target = GetClosestToCenter()
-        if target then
-            local tPos = workspace.CurrentCamera:WorldToViewportPoint(target.Position)
-            -- Наведение через mousemoverel (Xeno)
-            mousemoverel((tPos.X - center.X) * Settings.Smoothness, (tPos.Y - center.Y) * Settings.Smoothness)
+    -- Работа Аима
+    if Config.Enabled then
+        local targetPos = GetClosestTarget()
+        if targetPos then
+            -- Рассчитываем движение мыши через mousemoverel (Xeno)
+            local moveX = (targetPos.X - center.X) * Config.Smoothness
+            local moveY = (targetPos.Y - center.Y) * Config.Smoothness
+            mousemoverel(moveX, moveY)
         end
     end
 end)
 
--- === МЕНЮ ===
-local Tabs = { Main = Window:AddTab('Combat') }
-local AimSection = Tabs.Main:AddLeftGroupbox('Aimbot Settings')
-
-AimSection:AddToggle('AimToggle', { Text = 'Enable Aimbot', Default = false }):OnChanged(function()
-    Settings.AimBot = Toggles.AimToggle.Value
+-- === ОБРАБОТКА КНОПКИ P ===
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Config.MenuKey then
+        Config.Enabled = not Config.Enabled
+        HudFrame.Visible = not HudFrame.Visible
+        -- Уведомление в консоль для проверки
+        print("CompotScript Toggle: ", Config.Enabled)
+    end
 end)
 
-AimSection:AddSlider('FovSlider', { Text = 'FOV Radius', Default = 150, Min = 10, Max = 500, Rounding = 0 }):OnChanged(function()
-    Settings.Fov = Options.FovSlider.Value
-end)
-
-AimSection:AddSlider('SmoothSlider', { Text = 'Smoothness', Default = 0.2, Min = 0.05, Max = 1, Rounding = 2 }):OnChanged(function()
-    Settings.Smoothness = Options.SmoothSlider.Value
-end)
-
-AimSection:AddToggle('FovVisible', { Text = 'Show FOV Circle', Default = true }):OnChanged(function()
-    Settings.ShowFov = Toggles.FovVisible.Value
-end)
-
-Window:SetKeybind(Enum.KeyCode.P)
-Library:Notify("CompotScript Loaded. Press P to toggle menu.")
+print("--- COMPOT SCRIPT LOADED ---")
+print("Press P to Toggle Aim and HUD")
