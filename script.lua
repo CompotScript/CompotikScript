@@ -1,144 +1,118 @@
--- [[ COMPOT SCRIPT: DM ARENA EDITION ]] --
+-- [[ COMPOT SCRIPT: DM ARENA OPTIMIZED ]] --
 
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
+local Window = Library:CreateWindow({ Title = 'CompotScript | DM Arena', Center = true, AutoShow = true })
 
--- Настройки
-_G.AimbotEnabled = true
-_G.FovRadius = 150
-_G.Smoothness = 0.25 -- Чем меньше, тем плавнее
-_G.FovVisible = true
-_G.MenuVisible = true
+local Settings = {
+    AimBot = false,
+    Fov = 150,
+    Smoothness = 0.2, -- Чем ниже, тем жестче липнет
+    ShowFov = true
+}
 
--- Создаем HUD и Меню
+-- === КРАСИВЫЙ HUD (КАК НА СКРИНЕ) ===
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 160, 0, 50)
+MainFrame.Position = UDim2.new(0, 10, 0, 45) -- Сдвинул чуть ниже иконок Roblox
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BackgroundTransparency = 0.3
 
--- КРАСИВЫЙ HUD (FPS/PING)
-local HudFrame = Instance.new("Frame", ScreenGui)
-HudFrame.Size = UDim2.new(0, 180, 0, 60)
-HudFrame.Position = UDim2.new(0, 20, 0, 20)
-HudFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-HudFrame.BorderSizePixel = 0
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Thickness = 2
 
-local HudCorner = Instance.new("UICorner", HudFrame)
-HudCorner.CornerRadius = UDim.new(0, 8)
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0.5, 0)
+Title.Text = "COMPOT SCRIPT"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.BackgroundTransparency = 1
 
-local HudStroke = Instance.new("UIStroke", HudFrame)
-HudStroke.Color = Color3.fromRGB(0, 255, 150)
-HudStroke.Thickness = 1.5
+local Stats = Instance.new("TextLabel", MainFrame)
+Stats.Position = UDim2.new(0, 0, 0.5, 0)
+Stats.Size = UDim2.new(1, 0, 0.5, 0)
+Stats.Text = "FPS: 0 | PING: 0ms"
+Stats.Font = Enum.Font.Code
+Stats.TextColor3 = Color3.fromRGB(180, 180, 180)
+Stats.TextSize = 12
+Stats.BackgroundTransparency = 1
 
-local HudTitle = Instance.new("TextLabel", HudFrame)
-HudTitle.Size = UDim2.new(1, 0, 0, 30)
-HudTitle.Text = "CompotScript"
-HudTitle.Font = Enum.Font.GothamBold
-HudTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
-HudTitle.TextSize = 18
-HudTitle.BackgroundTransparency = 1
+task.spawn(function()
+    while task.wait(0.5) do
+        local fps = math.floor(1/task.wait())
+        local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+        Stats.Text = string.format("FPS: %d | PING: %dms", fps, ping)
+    end
+end)
 
-local HudStats = Instance.new("TextLabel", HudFrame)
-HudStats.Position = UDim2.new(0, 0, 0, 30)
-HudStats.Size = UDim2.new(1, 0, 0, 25)
-HudStats.Text = "FPS: ... | PING: ..."
-HudStats.Font = Enum.Font.Code
-HudStats.TextColor3 = Color3.fromRGB(255, 255, 255)
-HudStats.TextSize = 14
-HudStats.BackgroundTransparency = 1
+-- === ЛОГИКА AIM И FOV ===
+local FovCircle = Drawing.new("Circle")
+FovCircle.Thickness = 1
+FovCircle.Color = Color3.fromRGB(255, 255, 255)
+FovCircle.Filled = false
 
--- ПРОСТОЕ МЕНЮ (По центру для настройки)
-local MainMenu = Instance.new("Frame", ScreenGui)
-MainMenu.Size = UDim2.new(0, 250, 0, 150)
-MainMenu.Position = UDim2.new(0.5, -125, 0.5, -75)
-MainMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainMenu.BorderSizePixel = 0
-MainMenu.Visible = _G.MenuVisible
+local function GetClosestToCenter()
+    local target = nil
+    local dist = Settings.Fov
+    local center = Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
 
-local MenuCorner = Instance.new("UICorner", MainMenu)
-local MenuTitle = Instance.new("TextLabel", MainMenu)
-MenuTitle.Size = UDim2.new(1, 0, 0, 40)
-MenuTitle.Text = "SETTINGS [P TO HIDE]"
-MenuTitle.Font = Enum.Font.GothamBold
-MenuTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-MenuTitle.BackgroundTransparency = 1
-
-local InfoLabel = Instance.new("TextLabel", MainMenu)
-InfoLabel.Position = UDim2.new(0, 0, 0.4, 0)
-InfoLabel.Size = UDim2.new(1, 0, 0, 60)
-InfoLabel.Text = "Aimbot is ON\nFOV: 150\nSmooth: 0.25"
-InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-InfoLabel.BackgroundTransparency = 1
-
--- FOV КРУГ (РИСОВАНИЕ)
-local Circle = Drawing.new("Circle")
-Circle.Color = Color3.fromRGB(0, 255, 150)
-Circle.Thickness = 1
-Circle.NumSides = 64
-Circle.Radius = _G.FovRadius
-Circle.Visible = _G.FovVisible
-Circle.Filled = false
-
--- Функция поиска цели
-local function GetClosestTarget()
-    local nearestTarget = nil
-    local maxDistance = _G.FovRadius
-
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local rootPos = player.Character.HumanoidRootPart.Position
-            local screenPos, onScreen = Camera:WorldToViewportPoint(rootPos)
-
-            if onScreen then
-                local mousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-
-                if distance < maxDistance then
-                    nearestTarget = player.Character.HumanoidRootPart
-                    maxDistance = distance
+    for _, p in pairs(game.Players:GetPlayers()) do
+        if p ~= game.Players.LocalPlayer and p.Character then
+            -- Целимся в Пузо (HumanoidRootPart или UpperTorso)
+            local part = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("HumanoidRootPart")
+            if part then
+                local pos, onScreen = workspace.CurrentCamera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if mag < dist then
+                        target = part
+                        dist = mag
+                    end
                 end
             end
         end
     end
-    return nearestTarget
+    return target
 end
 
--- Основной цикл
-RunService.RenderStepped:Connect(function()
-    -- Обновление позиции FOV круга (Строго центр)
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    Circle.Position = center
-    Circle.Radius = _G.FovRadius
-    Circle.Visible = _G.FovVisible
+game:GetService("RunService").RenderStepped:Connect(function()
+    local center = Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2)
+    
+    FovCircle.Visible = Settings.ShowFov
+    FovCircle.Radius = Settings.Fov
+    FovCircle.Position = center
 
-    -- Логика Аима
-    if _G.AimbotEnabled then
-        local target = GetClosestTarget()
+    if Settings.AimBot then
+        local target = GetClosestToCenter()
         if target then
-            local targetPos = Camera:WorldToViewportPoint(target.Position)
-            local mousePos = center
-            local moveX = (targetPos.X - mousePos.X) * _G.Smoothness
-            local moveY = (targetPos.Y - mousePos.Y) * _G.Smoothness
-            
-            -- Используем mousemoverel для Xeno
-            if mousemoverel then
-                mousemoverel(moveX, moveY)
-            end
+            local tPos = workspace.CurrentCamera:WorldToViewportPoint(target.Position)
+            -- Наведение через mousemoverel (Xeno)
+            mousemoverel((tPos.X - center.X) * Settings.Smoothness, (tPos.Y - center.Y) * Settings.Smoothness)
         end
     end
-
-    -- Обновление HUD статистики
-    local fps = math.floor(1/task.wait())
-    local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-    HudStats.Text = "FPS: " .. fps .. " | PING: " .. ping .. "ms"
 end)
 
--- Переключение меню на P
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.P then
-        _G.MenuVisible = not _G.MenuVisible
-        MainMenu.Visible = _G.MenuVisible
-    end
+-- === МЕНЮ ===
+local Tabs = { Main = Window:AddTab('Combat') }
+local AimSection = Tabs.Main:AddLeftGroupbox('Aimbot Settings')
+
+AimSection:AddToggle('AimToggle', { Text = 'Enable Aimbot', Default = false }):OnChanged(function()
+    Settings.AimBot = Toggles.AimToggle.Value
 end)
 
-print("CompotScript successfully loaded! Use P to toggle menu.")
+AimSection:AddSlider('FovSlider', { Text = 'FOV Radius', Default = 150, Min = 10, Max = 500, Rounding = 0 }):OnChanged(function()
+    Settings.Fov = Options.FovSlider.Value
+end)
+
+AimSection:AddSlider('SmoothSlider', { Text = 'Smoothness', Default = 0.2, Min = 0.05, Max = 1, Rounding = 2 }):OnChanged(function()
+    Settings.Smoothness = Options.SmoothSlider.Value
+end)
+
+AimSection:AddToggle('FovVisible', { Text = 'Show FOV Circle', Default = true }):OnChanged(function()
+    Settings.ShowFov = Toggles.FovVisible.Value
+end)
+
+Window:SetKeybind(Enum.KeyCode.P)
+Library:Notify("CompotScript Loaded. Press P to toggle menu.")
