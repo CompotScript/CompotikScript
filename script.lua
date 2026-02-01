@@ -1,4 +1,4 @@
--- [[ COMPOT ELITE: GOD MODE EDITION ]] --
+-- [[ COMPOT ELITE: ULTIMATE V4 ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -8,125 +8,128 @@ local LP = Players.LocalPlayer
 local Config = {
     Aimbot = true,
     Fov = 150,
+    Smooth = 0.1,
+    TargetPart = "Head", -- Head или UpperTorso
     ESP = true,
     Skeletons = true,
-    Speed = 60,
-    Visible = true
+    WalkSpeed = 60,
+    MenuVisible = true
 }
 
--- === КРАСИВЫЙ HUD (SCREEN GUI) ===
-local function CreateUI()
-    local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    sg.Name = "Compot_Elite"
+-- === КРАСИВЫЙ HUD И МЕНЮ ===
+local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+ScreenGui.Name = "Compot_Elite_V4"
 
-    local hud = Instance.new("Frame", sg)
-    hud.Size = UDim2.new(0, 200, 0, 60)
-    hud.Position = UDim2.new(0, 20, 0, 20)
-    hud.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    Instance.new("UICorner", hud)
+-- Фоновый HUD (Левый верхний угол)
+local HudFrame = Instance.new("Frame", ScreenGui)
+HudFrame.Size = UDim2.new(0, 200, 0, 80)
+HudFrame.Position = UDim2.new(0, 15, 0, 15)
+HudFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Instance.new("UICorner", HudFrame)
+Instance.new("UIStroke", HudFrame).Color = Color3.fromRGB(0, 255, 150)
 
-    local txt = Instance.new("TextLabel", hud)
-    txt.Size = UDim2.new(1, 0, 1, 0)
-    txt.BackgroundTransparency = 1
-    txt.TextColor3 = Color3.fromRGB(0, 255, 150)
-    txt.Font = Enum.Font.Code
-    txt.TextSize = 14
-    
-    local menu = Instance.new("Frame", sg)
-    menu.Size = UDim2.new(0, 300, 0, 200)
-    menu.Position = UDim2.new(0.5, -150, 0.5, -100)
-    menu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    menu.Visible = Config.Visible
-    Instance.new("UICorner", menu)
-    Instance.new("UIStroke", menu).Color = Color3.fromRGB(0, 255, 150)
+local HudLabel = Instance.new("TextLabel", HudFrame)
+HudLabel.Size = UDim2.new(1, 0, 1, 0)
+HudLabel.BackgroundTransparency = 1
+HudLabel.TextColor3 = Color3.new(1,1,1)
+HudLabel.Font = Enum.Font.Code
+HudLabel.TextSize = 14
+HudLabel.Text = "COMPOT ELITE\nAim: ON [H]\nPart: Head"
 
-    local title = Instance.new("TextLabel", menu)
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.Text = "COMPOT SETTINGS [P]"
-    title.TextColor3 = Color3.new(1,1,1)
-    title.BackgroundTransparency = 1
+-- ОСНОВНОЕ CS-МЕНЮ
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 450, 0, 350)
+Main.Position = UDim2.new(0.5, -225, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Main.Visible = Config.MenuVisible
+Instance.new("UICorner", Main)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(40, 40, 40)
 
-    return sg, txt, menu
+local function CreateBtn(text, pos, callback)
+    local b = Instance.new("TextButton", Main)
+    b.Size = UDim2.new(0, 180, 0, 35)
+    b.Position = UDim2.new(0, 20, 0, pos)
+    b.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Text = text
+    b.Font = Enum.Font.Gotham
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(callback)
+    return b
 end
 
-local gui, hudText, mainMenu = CreateUI()
+-- Кнопки управления
+CreateBtn("Toggle Aim [H]", 60, function() Config.Aimbot = not Config.Aimbot end)
+CreateBtn("Part: Head", 100, function(b) 
+    if Config.TargetPart == "Head" then 
+        Config.TargetPart = "UpperTorso"
+    else 
+        Config.TargetPart = "Head" 
+    end
+end)
+CreateBtn("Skeleton ESP", 140, function() Config.Skeletons = not Config.Skeletons end)
+CreateBtn("Speed +", 180, function() Config.WalkSpeed = Config.WalkSpeed + 10 end)
+CreateBtn("Speed -", 220, function() Config.WalkSpeed = math.max(16, Config.WalkSpeed - 10) end)
 
--- === ESP & SKELETON LOGIC ===
-local function ApplyESP(p)
-    if p == LP then return end
-    p.CharacterAdded:Connect(function(char)
-        wait(1)
-        if not char:FindFirstChild("HumanoidRootPart") then return end
-        
-        -- Box & Info
-        local bgu = Instance.new("BillboardGui", char.HumanoidRootPart)
-        bgu.AlwaysOnTop = true
-        bgu.Size = UDim2.new(4, 0, 5, 0)
-        bgu.Name = "CompotESP"
-        
-        local frame = Instance.new("Frame", bgu)
-        frame.Size = UDim2.new(1, 0, 1, 0)
-        frame.BackgroundTransparency = 1
-        local stroke = Instance.new("UIStroke", frame)
-        stroke.Color = Color3.fromRGB(255, 0, 0)
-        stroke.Thickness = 1
-        
-        local info = Instance.new("TextLabel", bgu)
-        info.Size = UDim2.new(1, 0, 0, 20)
-        info.Position = UDim2.new(0, 0, -0.3, 0)
-        info.Text = p.Name
-        info.TextColor3 = Color3.new(1,1,1)
-        info.BackgroundTransparency = 1
+-- === SKELETON ESP (ЖЕСТКИЙ МЕТОД) ===
+local function AddSkeleton(char)
+    local p = Players:GetPlayerFromCharacter(char)
+    if not p or p == LP then return end
+    
+    RunService.RenderStepped:Connect(function()
+        if Config.Skeletons and char and char:FindFirstChild("HumanoidRootPart") then
+            -- Здесь можно добавить отрисовку линий через Beam или Adornments
+            -- Для DM Arena используем Highlight (самый стабильный)
+            if not char:FindFirstChild("CompotHighlight") then
+                local hl = Instance.new("Highlight", char)
+                hl.Name = "CompotHighlight"
+                hl.FillColor = Color3.fromRGB(255, 0, 0)
+                hl.OutlineColor = Color3.new(1,1,1)
+            end
+        end
     end)
 end
 
-for _, p in pairs(Players:GetPlayers()) do ApplyESP(p) end
-Players.PlayerAdded:Connect(ApplyESP)
+for _, p in pairs(Players:GetPlayers()) do if p.Character then AddSkeleton(p.Character) end p.CharacterAdded:Connect(AddSkeleton) end
 
--- === ОСНОВНОЙ ЦИКЛ ===
+-- === ГЛАВНЫЙ ЦИКЛ ===
 RunService.RenderStepped:Connect(function()
-    -- HUD
-    hudText.Text = string.format("COMPOT ELITE\nAim: %s | Spd: %d\n[P] Menu | [H] Aim", tostring(Config.Aimbot), Config.Speed)
+    HudLabel.Text = string.format("COMPOT ELITE\nAim: %s [H]\nPart: %s\nSpeed: %d", tostring(Config.Aimbot), Config.TargetPart, Config.WalkSpeed)
     
-    -- Speed
+    -- Speed Hack
     if LP.Character and LP.Character:FindFirstChild("Humanoid") then
-        LP.Character.Humanoid.WalkSpeed = Config.Speed
+        LP.Character.Humanoid.WalkSpeed = Config.WalkSpeed
         if LP.Character.Humanoid.MoveDirection.Magnitude > 0 then
-            LP.Character:TranslateBy(LP.Character.Humanoid.MoveDirection * (Config.Speed / 150))
+            LP.Character:TranslateBy(LP.Character.Humanoid.MoveDirection * (Config.WalkSpeed / 160))
         end
     end
 
-    -- Aim
+    -- Aimbot Logic
     if Config.Aimbot then
         local target = nil
         local dist = Config.Fov
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+
         for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local pos, vis = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+            if p ~= LP and p.Character and p.Character:FindFirstChild(Config.TargetPart) then
+                local part = p.Character[Config.TargetPart]
+                local pos, vis = Camera:WorldToViewportPoint(part.Position)
                 if vis then
                     local m = (Vector2.new(pos.X, pos.Y) - center).Magnitude
                     if m < dist then target = pos dist = m end
                 end
             end
         end
+        
         if target and mousemoverel then
-            mousemoverel((target.X - center.X) * 0.1, (target.Y - center.Y) * 0.1)
+            mousemoverel((target.X - center.X) * Config.Smooth, (target.Y - center.Y) * Config.Smooth)
         end
     end
 end)
 
--- === БИНДЫ ===
+-- Бинды
 UserInputService.InputBegan:Connect(function(i, p)
     if p then return end
-    if i.KeyCode == Enum.KeyCode.P then
-        Config.Visible = not Config.Visible
-        mainMenu.Visible = Config.Visible
-    elseif i.KeyCode == Enum.KeyCode.H then
-        Config.Aimbot = not Config.Aimbot
-    elseif i.KeyCode == Enum.KeyCode.K then
-        Config.Speed = Config.Speed + 10
-    elseif i.KeyCode == Enum.KeyCode.L then
-        Config.Speed = math.max(16, Config.Speed - 10)
-    end
+    if i.KeyCode == Enum.KeyCode.P then Main.Visible = not Main.Visible
+    elseif i.KeyCode == Enum.KeyCode.H then Config.Aimbot = not Config.Aimbot end
 end)
