@@ -1,169 +1,132 @@
--- [[ COMPOT ELITE: ULTIMATE CS EDITION ]] --
+-- [[ COMPOT ELITE: GOD MODE EDITION ]] --
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
--- Конфиг
 local Config = {
     Aimbot = true,
     Fov = 150,
-    Smooth = 0.08,
     ESP = true,
-    Skeleton = true,
-    SpeedEnabled = true,
-    WalkSpeed = 50,
+    Skeletons = true,
+    Speed = 60,
     Visible = true
 }
 
--- === КРАСИВЫЙ HUD (Стеклянный стиль) ===
-local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-local HudFrame = Instance.new("Frame", ScreenGui)
-HudFrame.Size = UDim2.new(0, 220, 0, 70)
-HudFrame.Position = UDim2.new(0, 15, 0, 15)
-HudFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-HudFrame.BorderSizePixel = 0
-Instance.new("UICorner", HudFrame).CornerRadius = UDim.new(0, 8)
+-- === КРАСИВЫЙ HUD (SCREEN GUI) ===
+local function CreateUI()
+    local sg = Instance.new("ScreenGui", game:GetService("CoreGui"))
+    sg.Name = "Compot_Elite"
 
-local Line = Instance.new("Frame", HudFrame)
-Line.Size = UDim2.new(1, 0, 0, 2)
-Line.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
-Line.BorderSizePixel = 0
-Instance.new("UICorner", Line)
+    local hud = Instance.new("Frame", sg)
+    hud.Size = UDim2.new(0, 200, 0, 60)
+    hud.Position = UDim2.new(0, 20, 0, 20)
+    hud.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Instance.new("UICorner", hud)
 
-local HudTitle = Instance.new("TextLabel", HudFrame)
-HudTitle.Size = UDim2.new(1, 0, 0, 35)
-HudTitle.Text = "COMPOT.ELITE"
-HudTitle.TextColor3 = Color3.new(1,1,1)
-HudTitle.Font = Enum.Font.GothamBold
-HudTitle.TextSize = 16
-HudTitle.BackgroundTransparency = 1
-
-local HudStats = Instance.new("TextLabel", HudFrame)
-HudStats.Position = UDim2.new(0, 0, 0, 30)
-HudStats.Size = UDim2.new(1, 0, 0, 30)
-HudStats.Text = "FPS: ... | PING: ..."
-HudStats.TextColor3 = Color3.fromRGB(200, 200, 200)
-HudStats.Font = Enum.Font.Code
-HudStats.TextSize = 14
-HudStats.BackgroundTransparency = 1
-
--- === CS-STYLE GUI (Меню) ===
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 400, 0, 300)
-Main.Position = UDim2.new(0.5, -200, 0.5, -150)
-Main.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Main.BorderSizePixel = 0
-Main.Visible = Config.Visible
-Instance.new("UICorner", Main)
-local Stroke = Instance.new("UIStroke", Main)
-Stroke.Color = Color3.fromRGB(40, 40, 40)
-Stroke.Thickness = 2
-
-local SideBar = Instance.new("Frame", Main)
-SideBar.Size = UDim2.new(0, 100, 1, 0)
-SideBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-SideBar.BorderSizePixel = 0
-Instance.new("UICorner", SideBar)
-
-local MenuTitle = Instance.new("TextLabel", SideBar)
-MenuTitle.Size = UDim2.new(1, 0, 0, 40)
-MenuTitle.Text = "MENU"
-MenuTitle.TextColor3 = Color3.fromRGB(0, 255, 150)
-MenuTitle.Font = Enum.Font.GothamBold
-MenuTitle.BackgroundTransparency = 1
-
-local Container = Instance.new("Frame", Main)
-Container.Position = UDim2.new(0, 110, 0, 10)
-Container.Size = UDim2.new(1, -120, 1, -20)
-Container.BackgroundTransparency = 1
-
-local function CreateToggle(text, cfg_key, pos)
-    local btn = Instance.new("TextButton", Container)
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.Position = UDim2.new(0, 0, 0, pos)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 13
-    Instance.new("UICorner", btn)
+    local txt = Instance.new("TextLabel", hud)
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.BackgroundTransparency = 1
+    txt.TextColor3 = Color3.fromRGB(0, 255, 150)
+    txt.Font = Enum.Font.Code
+    txt.TextSize = 14
     
-    local function Update()
-        btn.Text = text .. ": " .. (Config[cfg_key] and "ON" or "OFF")
-        btn.TextColor3 = Config[cfg_key] and Color3.fromRGB(0, 255, 150) or Color3.new(1,1,1)
-    end
-    btn.MouseButton1Click:Connect(function() Config[cfg_key] = not Config[cfg_key] Update() end)
-    Update()
+    local menu = Instance.new("Frame", sg)
+    menu.Size = UDim2.new(0, 300, 0, 200)
+    menu.Position = UDim2.new(0.5, -150, 0.5, -100)
+    menu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    menu.Visible = Config.Visible
+    Instance.new("UICorner", menu)
+    Instance.new("UIStroke", menu).Color = Color3.fromRGB(0, 255, 150)
+
+    local title = Instance.new("TextLabel", menu)
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Text = "COMPOT SETTINGS [P]"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.BackgroundTransparency = 1
+
+    return sg, txt, menu
 end
 
-CreateToggle("AimBot [H]", "Aimbot", 0)
-CreateToggle("Player ESP", "ESP", 45)
-CreateToggle("Skeleton ESP", "Skeleton", 90)
-CreateToggle("Speed Enabled", "SpeedEnabled", 135)
+local gui, hudText, mainMenu = CreateUI()
 
--- Скорость +/-
-local SLabel = Instance.new("TextLabel", Container)
-SLabel.Size = UDim2.new(1, 0, 0, 30)
-SLabel.Position = UDim2.new(0, 0, 0, 180)
-SLabel.Text = "WalkSpeed: " .. Config.WalkSpeed
-SLabel.TextColor3 = Color3.new(1,1,1)
-SLabel.BackgroundTransparency = 1
-
-local function SBtn(text, x, val)
-    local b = Instance.new("TextButton", Container)
-    b.Size = UDim2.new(0.45, 0, 0, 30)
-    b.Position = UDim2.new(x, 0, 0, 215)
-    b.Text = text
-    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function()
-        Config.WalkSpeed = math.clamp(Config.WalkSpeed + val, 16, 200)
-        SLabel.Text = "WalkSpeed: " .. Config.WalkSpeed
+-- === ESP & SKELETON LOGIC ===
+local function ApplyESP(p)
+    if p == LP then return end
+    p.CharacterAdded:Connect(function(char)
+        wait(1)
+        if not char:FindFirstChild("HumanoidRootPart") then return end
+        
+        -- Box & Info
+        local bgu = Instance.new("BillboardGui", char.HumanoidRootPart)
+        bgu.AlwaysOnTop = true
+        bgu.Size = UDim2.new(4, 0, 5, 0)
+        bgu.Name = "CompotESP"
+        
+        local frame = Instance.new("Frame", bgu)
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundTransparency = 1
+        local stroke = Instance.new("UIStroke", frame)
+        stroke.Color = Color3.fromRGB(255, 0, 0)
+        stroke.Thickness = 1
+        
+        local info = Instance.new("TextLabel", bgu)
+        info.Size = UDim2.new(1, 0, 0, 20)
+        info.Position = UDim2.new(0, 0, -0.3, 0)
+        info.Text = p.Name
+        info.TextColor3 = Color3.new(1,1,1)
+        info.BackgroundTransparency = 1
     end)
 end
-SBtn("- Speed", 0, -10)
-SBtn("+ Speed", 0.55, 10)
 
--- === ОСНОВНАЯ ЛОГИКА (SPEED / AIM) ===
+for _, p in pairs(Players:GetPlayers()) do ApplyESP(p) end
+Players.PlayerAdded:Connect(ApplyESP)
+
+-- === ОСНОВНОЙ ЦИКЛ ===
 RunService.RenderStepped:Connect(function()
-    -- Обновление HUD
-    local fps = math.floor(1/task.wait())
-    local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
-    HudStats.Text = "FPS: " .. fps .. " | PING: " .. ping .. "ms"
+    -- HUD
+    hudText.Text = string.format("COMPOT ELITE\nAim: %s | Spd: %d\n[P] Menu | [H] Aim", tostring(Config.Aimbot), Config.Speed)
+    
+    -- Speed
+    if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+        LP.Character.Humanoid.WalkSpeed = Config.Speed
+        if LP.Character.Humanoid.MoveDirection.Magnitude > 0 then
+            LP.Character:TranslateBy(LP.Character.Humanoid.MoveDirection * (Config.Speed / 150))
+        end
+    end
 
     -- Aim
     if Config.Aimbot then
-        local target, dist = nil, Config.Fov
+        local target = nil
+        local dist = Config.Fov
         local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                 local pos, vis = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if vis then
-                    local mag = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                    if mag < dist then target = pos dist = mag end
+                    local m = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                    if m < dist then target = pos dist = m end
                 end
             end
         end
         if target and mousemoverel then
-            mousemoverel((target.X - center.X) * Config.Smooth, (target.Y - center.Y) * Config.Smooth)
+            mousemoverel((target.X - center.X) * 0.1, (target.Y - center.Y) * 0.1)
         end
-    end
-
-    -- SPEED (ПРИНУДИТЕЛЬНО)
-    if Config.SpeedEnabled and LP.Character and LP.Character:FindFirstChild("Humanoid") then
-        LP.Character.Humanoid.WalkSpeed = Config.WalkSpeed
     end
 end)
 
--- Бинды
-UserInputService.InputBegan:Connect(function(input, proc)
-    if proc then return end
-    if input.KeyCode == Config.MenuKey then
+-- === БИНДЫ ===
+UserInputService.InputBegan:Connect(function(i, p)
+    if p then return end
+    if i.KeyCode == Enum.KeyCode.P then
         Config.Visible = not Config.Visible
-        Main.Visible = Config.Visible
-    elseif input.KeyCode == Enum.KeyCode.H then
+        mainMenu.Visible = Config.Visible
+    elseif i.KeyCode == Enum.KeyCode.H then
         Config.Aimbot = not Config.Aimbot
+    elseif i.KeyCode == Enum.KeyCode.K then
+        Config.Speed = Config.Speed + 10
+    elseif i.KeyCode == Enum.KeyCode.L then
+        Config.Speed = math.max(16, Config.Speed - 10)
     end
 end)
